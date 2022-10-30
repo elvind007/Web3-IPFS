@@ -4,18 +4,22 @@ import ipfshttpclient
 from my_constants import app
 import pyAesCrypt
 from flask import Flask, flash, request, redirect, render_template, url_for, jsonify
-from flask_socketio import SocketIO, send, emit
 from werkzeug.utils import secure_filename
+from flask_socketio import SocketIO, send, emit
 import socket
 import pickle
 from blockchain import Blockchain
 import requests
+import socketio
 
 # The package requests is used in the 'hash_user_file' and 'retrieve_from hash' functions to send http post requests.
 # Notice that 'requests' is different than the package 'request'.
 # 'request' package is used in the 'add_file' function for multiple actions.
 
-socketio = SocketIO(app)
+sio = socketio.Client() 
+client_ip = app.config['NODE_ADDR']
+connection_status = False
+
 blockchain = Blockchain()
 
 def allowed_file(filename):
@@ -45,6 +49,7 @@ def hash_user_file(user_file, file_key):
 
 def retrieve_from_hash(file_hash, file_key):
     client = ipfshttpclient.connect()
+    file_content = client.cat(file_hash)
     file_path = os.path.join(app.config['DOWNLOAD_FOLDER'], file_hash)
     user_file = open(file_path, 'ab+')
     user_file.write(file_content)
@@ -76,15 +81,6 @@ def upload():
 def download():
     return render_template('download.html' , message = "Welcome!")
 
-@app.route('/connect_blockchain')
-def connect_blockchain():
-    is_chain_replaced = blockchain.replace_chain()
-    return render_template('connect_blockchain.html', chain = blockchain.chain, nodes = len(blockchain.nodes))
-
-@app.errorhandler(413)
-def entity_too_large(e):
-    return render_template('upload.html' , message = "Requested Entity Too Large!")
-
 @app.route('/add_file', methods=['POST'])
 def add_file():
     
@@ -113,7 +109,6 @@ def add_file():
                 sender = request.form['sender_name']
                 receiver = request.form['receiver_name']
                 file_key = request.form['file_key']
-
                 try:
                     hashed_output1 = hash_user_file(file_path, file_key)
                     index = blockchain.add_file(sender, receiver, hashed_output1)
@@ -122,7 +117,8 @@ def add_file():
                     error_flag = True
                     if "ConnectionError:" in message:
                         message = "Gateway down or bad Internet!"
-
+                # message = f'File successfully uploaded'
+                # message2 =  f'It will be added to Block {index-1}'
             else:
                 error_flag = True
                 message = 'Allowed file types are txt, pdf, png, jpg, jpeg, gif'
@@ -174,27 +170,46 @@ def get_chain():
                 'length': len(blockchain.chain)}
     return jsonify(response), 200
 
-@socketio.on('connect')
-def handle_connect():
-    print('Client connected')
-    print(request)
+@sio.event
+def connect():
+    print('connected to server')
 
-@socketio.on('add_client_node')
-def handle_node(client_node):
-    print(client_node)
-    blockchain.nodes.add(client_node['node_address'])
-    emit('my_response', {'data': pickle.dumps(blockchain.nodes)}, broadcast = True)
+@sio.event
+def disconnect():
+    print('disconnected from server')
 
-@socketio.on('remove_client_node')
-def handle_node(client_node):
-    print(client_node)
-    blockchain.nodes.remove(client_node['node_address'])
-    emit('my_response', {'data': pickle.dumps(blockchain.nodes)}, broadcast = True)
+@sio.event
+def my_response(message):
+    print(pickle.loads(message['data']))
+    blockchain.nodes = pickle.loads(message['data'])
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    print('Client disconnected')
-    print(request)
+@app.route('/connect_blockchain')
+def connect_blockchain():
+    global connection_status
+    nodes = len(blockchain.nodes)
+    if connection_status is False:
+        sio.connect('http://'+app.config['SERVER_IP'])
+        sio.emit('add_client_node', 
+                {'node_address' : client_ip['Host'] + ':' + str(client_ip['Port'])}
+                )
+        nodes = nodes + 1
+
+    is_chain_replaced = blockchain.replace_chain()
+    connection_status = True
+    return render_template('connect_blockchain.html', messages = {'message1' : "Welcome to the services page",
+                                                                  'message2' : "Congratulations , you are now connected to the blockchain.",
+                                                                 } , chain = blockchain.chain, nodes = nodes)
+
+@app.route('/disconnect_blockchain')
+def disconnect_blockchain():
+    global connection_status
+    connection_status = False
+    sio.emit('remove_client_node', 
+            {'node_address' : client_ip['Host'] + ':' + str(client_ip['Port'])}
+            )
+    sio.disconnect()
+    
+    return render_template('index.html')
 
 if __name__ == '__main__':
-    socketio.run(app, host = '127.0.0.1', port= 5111)
+    app.run(host = client_ip['Host'], port= client_ip['Port'])
