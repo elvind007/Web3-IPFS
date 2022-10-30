@@ -1,7 +1,7 @@
 from flask import Flask
 
-UPLOAD_FOLDER = '/Users/souviksaha/Desktop/Blockchain-based-Decentralized-File-Sharing-System-using-IPFS/main_server/uploads'
-DOWNLOAD_FOLDER = '/Users/souviksaha/Desktop/Blockchain-based-Decentralized-File-Sharing-System-using-IPFS/main_server/downloads'
+UPLOAD_FOLDER = '/Users/aksha/OneDrive/Documents/GitHub/Web3-IPFS/main_server/UPLOAD'
+DOWNLOAD_FOLDER = '/Users/aksha/OneDrive/Documents/GitHub/Web3-IPFS/main_server/DOWNLOAD'
 
 app = Flask(__name__)
 app.secret_key = "secret key"
