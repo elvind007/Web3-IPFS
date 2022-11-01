@@ -38,13 +38,14 @@ def encrypt_file(file_path, file_key):
 def hash_user_file(user_file, file_key):
     encrypt_file(user_file, file_key)
     encrypted_file_path = user_file + ".aes"
-    client = ipfshttpclient.connect()
+    client = ipfshttpclient.connect('/dns/ipfs.infura.io/tcp/5001/https')
     response = client.add(encrypted_file_path)
     file_hash = response['Hash']
     return file_hash
 
 def retrieve_from_hash(file_hash, file_key):
-    client = ipfshttpclient.connect()
+    client = ipfshttpclient.connect('/dns/ipfs.infura.io/tcp/5001/https')
+    file_content = client.cat(file_hash)
     file_path = os.path.join(app.config['DOWNLOAD_FOLDER'], file_hash)
     user_file = open(file_path, 'ab+')
     user_file.write(file_content)

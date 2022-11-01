@@ -3,7 +3,6 @@ from flask import Flask
 UPLOAD_FOLDER = '/Users/emdd0/Documents/GitHun/Web3-IPFS/uploads'
 DOWNLOAD_FOLDER = '/Users/emdd0/Documents/GitHun/Web3-IPFS/downloads'
 
-
 app = Flask(__name__)
 app.secret_key = "secret key"
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
