@@ -55,3 +55,27 @@ Subsequently, we uploaded a file ‘y’ from node B using file key ‘Q’ and 
 After the consequent sharing of the two files, the blockchain was updated at both the nodes.
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Notes:
+try infure.io
+try pinata https://api.pinata.cloud
+try web3 storage
+
+
